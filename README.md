@@ -15,4 +15,5 @@ Server actions enabled for backend operations
 Prerequisites
 Node.js ≥ 18
 pnpm / npm / yarn
+> 
 Solana wallet (for testing swaps)
