@@ -1,0 +1,136 @@
+﻿/* Nakamoto Capital Swap — Take-Home Test
+
+
+To test:
+
+
+1. Create a new Next.js 14 project with Tailwind + TypeScript.
+
+
+
+
+2. Replace files with the code snippets below.
+
+
+
+
+3. Add .env.local with: JUPITER_BASE=https://quote-api.jup.ag NEXT_PUBLIC_RPC_URL=https://api.mainnet-beta.solana.com
+
+
+
+
+4. Run pnpm dev (or npm/yarn).
+
+
+
+
+
+
+File Index:
+
+
+1. Config – package.json
+
+
+
+
+2. Config – next.config.mjs
+
+
+
+
+3. Config – tailwind.config.ts
+
+
+
+
+4. Config – postcss.config.js
+
+
+
+
+5. Styles – app/globals.css
+
+
+
+
+6. Libraries – lib/solana.ts
+
+
+
+
+7. Libraries – lib/jupiter.ts
+
+
+
+
+8. Components – Providers.tsx
+
+
+
+
+9. Components – WalletConnect.tsx
+
+
+
+
+10. Components – SwapCard.tsx
+
+
+
+
+11. Pages – app/layout.tsx
+
+
+
+
+12. Pages – app/page.tsx
+
+
+
+
+13. API – app/api/quote/route.ts
+
+
+
+
+14. API – app/api/swap/route.ts
+
+
+
+
+15. Docs – README.md */
+
+
+
+
+
+
+// ================================= // 1. Config – package.json // ================================= { "name": "nakamoto-capital-swap", "private": true, "version": "0.1.0", "type": "module", "scripts": { "dev": "next dev", "build": "next build", "start": "next start", "lint": "next lint" }, "dependencies": { "@solana/wallet-adapter-base": "^0.9.23", "@solana/wallet-adapter-react": "^0.15.35", "@solana/wallet-adapter-react-ui": "^0.9.35", "@solana/wallet-adapter-wallets": "^0.19.22", "@solana/web3.js": "^1.95.3", "bs58": "^5.0.0", "next": "^14.2.4", "react": "^18.2.0", "react-dom": "^18.2.0", "sonner": "^1.5.0", "zod": "^3.23.8" }, "devDependencies": { "@types/node": "^20.11.30", "@types/react": "^18.2.66", "@types/react-dom": "^18.2.22", "autoprefixer": "^10.4.19", "eslint": "^8.57.0", "eslint-config-next": "^14.2.4", "postcss": "^8.4.38", "tailwindcss": "^3.4.4", "typescript": "^5.4.5" } }
+
+
+// ================================= // 2. Config – next.config.mjs // ================================= /** @type {import('next').NextConfig} */ const nextConfig = { reactStrictMode: true, experimental: { serverActions: { bodySizeLimit: '2mb' } }, }; export default nextConfig;
+
+
+// ================================= // 3. Config – tailwind.config.ts // ================================= import type { Config } from 'tailwindcss'; export default { content: ['./app//*.{ts,tsx}', './components//*.{ts,tsx}'], theme: { extend: {} }, plugins: [] } satisfies Config;
+
+
+// ================================= // 4. Config – postcss.config.js // ================================= module.exports = { plugins: { tailwindcss: {}, autoprefixer: {} } };
+
+
+// ================================= // 5. Styles – app/globals.css // ================================= @tailwind base; @tailwind components; @tailwind utilities; :root { color-scheme: dark; } body { @apply bg-neutral-950 text-neutral-100; } input,button,select { @apply outline-none; }
+
+
+// ================================= // 6. Libraries – lib/solana.ts // ================================= import { clusterApiUrl, Connection, PublicKey, VersionedTransaction } from '@solana/web3.js'; export const RPC_ENDPOINT = process.env.NEXT_PUBLIC_RPC_URL || clusterApiUrl('mainnet-beta'); export const connection = new Connection(RPC_ENDPOINT, 'confirmed'); export const WSOL_MINT = 'So11111111111111111111111111111111111111112'; export const NKTX_MINT = 'nktxHBwMUTBPJJtr8Z8mcbS4m6zCeEDVuDRHfMAWmWB'; export const SOL_DECIMALS = 9; export function toAtomicSol(amountSol: number) { return Math.floor(amountSol * 10 ** SOL_DECIMALS); } export function txFromBase64(b64: string) { return VersionedTransaction.deserialize(Buffer.from(b64, 'base64')); } export function explorerTx(sig: string) { return https://solscan.io/tx/${sig}; }
+
+
+// ================================= // 7. Libraries – lib/jupiter.ts // ================================= import { z } from 'zod'; export const JUP_BASE = process.env.JUPITER_BASE || 'https://quote-api.jup.ag'; export const QuoteSchema = z.object({ inputMint: z.string(), outputMint: z.string(), inAmount: z.string(), outAmount: z.string(), otherAmountThreshold: z.string(), slippageBps: z.number(), priceImpactPct: z.number().optional(), routePlan: z.array(z.any()), }); export type QuoteResponse = z.infer<typeof QuoteSchema>; export const SwapSchema = z.object({ swapTransaction: z.string() }); export type SwapTxResponse = z.infer<typeof SwapSchema>;
+
+
+// ================================= // 8. Components – Providers.tsx // ================================= "use client"; import { ReactNode, useMemo } from 'react'; import { ConnectionProvider, WalletProvider } from '@solana/wallet-adapter-react'; import { WalletModalProvider } from '@solana/wallet-adapter-react-ui'; import { clusterApiUrl } from '@solana/web3.js'; import { PhantomWalletAdapter, SolflareWalletAdapter, BackpackWalletAdapter, TrustWalletAdapter, CoinbaseWalletAdapter } from '@solana/wallet-adapter-wallets'; import '@solana/wallet-adapter-react-ui/styles.css'; export default function Providers({ children }: { children: ReactNode }) { const endpoint = process.env.NEXT_PUBLIC_RPC_URL || clusterApiUrl('mainnet-beta'); const wallets = useMemo(() => [ new PhantomWalletAdapter(), new SolflareWalletAdapter(), new BackpackWalletAdapter(), new TrustWalletAdapter(), new CoinbaseWalletAdapter(), ], []); return ( <ConnectionProvider endpoint={endpoint} config={{ commitment: 'confirmed' }}> <WalletProvider wallets={wallets} autoConnect> <WalletModalProvider>{children}</WalletModalProvider> </WalletProvider> </ConnectionProvider> ); }
+
+
+// ================================= // 9. Components – WalletConnect.tsx // ================================= "use client"; import { WalletMultiButton } from '@solana/wallet-adapter-react-ui'; export default function WalletConnect() { return (<div className="flex justify-end"><WalletMultiButton className="!bg-white/10 hover:!bg-white/20 !rounded-xl !px-4 !py-2" /></div>); }
+
+
+// ================================= // 10. Components – SwapCard.tsx // ================================= "use client"; import { useConnection, useWallet } from '@solana/wallet-adapter-react'; import { useState } from 'react'; import { toast } from 'sonner'; import { NKTX_MINT, WSOL_MINT, toAtomicSol, explorerTx } from '@/lib/solana'; import { VersionedTransaction } from '@solana/web3.js'; export default function SwapCard() { const { connection } = useConnection(); const { publicKey, signTransaction } = useWallet(); const [amount, setAmount] = useState<string>(''); const [loading, setLoading] = useState(false); const [quote, setQuote] = useState<any | null>(null); const [slippage, setSlippage] = useState(50); async function fetchQuote() { if (!amount) return; try { const inAmount = toAtomicSol(Number(amount)); const res = await fetch(/api/quote?inputMint=${WSOL_MINT}&outputMint=${NKTX_MINT}&amount=${inAmount}&slippageBps=${slippage}); const data = await res.json(); setQuote(data); } catch (e: any) { toast.error(e.message ?? 'Quote error'); } } async function doSwap() { if (!publicKey || !signTransaction || !quote) return; setLoading(true); try { const res = await fetch('/api/swap', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ quoteResponse: quote, userPublicKey: publicKey.toBase58() }) }); const { swapTransaction } = await res.json(); const tx = VersionedTransaction.deserialize(Buffer.from(swapTransaction, 'base64'));
