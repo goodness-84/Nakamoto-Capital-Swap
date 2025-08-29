@@ -13,7 +13,7 @@ Server actions enabled for backend operations
 > 
 > ⚙️ Getting Started
 Prerequisites
-Node.js ≥ 18
+Node.js ≥ 18.
 pnpm / npm / yarn
 > 
 Solana wallet (for testing swaps)
